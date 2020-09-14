@@ -1,14 +1,5 @@
 # **R-codes_sensitivity-analysis-method-through-imputation**
 
-A method for assessing robustness of the results of a star-shaped network meta-analysis under the unidentifiable consistency assumption
-
-Jeong-Hwa Yoon1, Sofia Dias2, Seokyung Hahn3†
-
-1Interdisciplinary Program in Medical Informatics, Seoul National University College of Medicine, Seoul, South Korea
-2Centre for Reviews and Dissemination, University of York, York, UK
-3Medical Statistics Laboratory, Department of Medicine, Seoul National University College of Medicine, Seoul, South Korea
-
-
 The repository contains material to reproduce results of the article "A method for assessing robustness of the results of a star-shaped network meta-analysis under the unidentifiable consistency assumption" (BMC medical research methodology 2020).
 
 This repository contains:
