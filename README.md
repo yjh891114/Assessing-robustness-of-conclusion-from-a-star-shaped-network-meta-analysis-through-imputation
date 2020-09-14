@@ -9,6 +9,4 @@ This repository contains:
 * diff_in_means.R, an R script to reproduce the Crohn's disease exampel.
 
 Citation information:
-Jeong-Hwa Yoon, Sofia Dias, Seokyung Hahn. A method for assessing robustness of the results of a star-shaped network meta-analysis under the unidentifiable consistency assumption. BMC medical research methodology   10, 1414 (2020). https://doi.org/10.1038/s41598-020-58088-2
-  
-  
+Jeong-Hwa Yoon, Sofia Dias, Seokyung Hahn. A method for assessing robustness of the results of a star-shaped network meta-analysis under the unidentifiable consistency assumption. BMC medical research methodology. 2020 XX.XXXX.XX
