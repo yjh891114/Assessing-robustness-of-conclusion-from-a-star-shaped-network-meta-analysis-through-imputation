@@ -1,0 +1,267 @@
+#R code : Crohn's disease
+library(R2WinBUGS)
+
+
+
+# Calling WinBUGS code for shared parameter model: 
+# Adapt the WinBUGS code published in the supplement of:
+#Dias S, Welton NJ, Sutton AJ, Caldwell DM, Lu G, Ades A. 
+#NICE DSU Technical Support Document 4: Inconsistency in networks of evidence based on randomised controlled trials. NICE Decision Support Unit. 2011.
+
+# Calling WinBUGS code for consistency model and inconsistency model: 
+# Adapt the WinBUGS code published in the supplement of:
+#Dias S, Welton NJ, Sutton AJ, Ades A: NICE DSU technical support document 2: a generalised linear modelling framework for pairwise and network meta-analysis of randomised controlled trials. NICE Decision Support Unit, 2011.
+
+
+modelfile<-"consistency_binomial.txt"
+modelfile2<-"consistency_binomial_shared.txt"
+modelfile3<-"inconsistency_binomial_shared.txt"
+
+data<-read.csv("Crohns_disease.csv",header=T) #loading the Crohn's disease data set
+#Purine Analogues: t=1
+#Placebo: t=2
+#5-ASA: t=3
+#Adalimumab: t=4
+#Infliximab: t=5
+
+
+## network meta-analysis using the Crohn's disease data set
+
+r<-data.matrix(data[,c(1,3,5)],rownames.force = NA)
+n<-data.matrix(data[,c(2,4,6)],rownames.force = NA)
+t<-data.matrix(data[,7:9],rownames.force = NA)
+ns<-12
+na<-data$na..
+nt<-5
+
+inits<-function(){list(d=c(NA,0,0,0,0),sd=1)}
+
+data<-list("r","n","t","ns","na","nt")
+vars2keep<-list("d","sd","md","best","totresdev")
+
+
+output<-bugs(
+    model.file=file.path(modelfile),
+    data=data,
+    inits = inits,
+    parameters.to.save = vars2keep,
+    n.chains=3,
+    n.iter=40000,
+    n.burnin=10000,
+    n.thin=20,
+    debug=TRUE,
+    bugs.seed=1000,
+    DIC=TRUE
+ )
+
+
+
+
+##########################################################################################
+Application of our developed method to the data set 
+##########################################################################################
+
+##calculation of between-study and within-study variances 
+(tau<-0.3025)
+(assumed_se24<-sqrt(5*(1.098^2)-tau^2))
+(assumed_se25<-sqrt(5*(1.439^2)-tau^2))
+(assumed_se35<-sqrt(5*(1.43^2)-tau^2))
+
+
+#> (tau<-0.3025)
+#[1] 0.3025
+#> (assumed_se24<-sqrt(5*(1.098^2)-tau^2))
+#[1] 2.436496
+#> (assumed_se25<-sqrt(5*(1.439^2)-tau^2))
+#[1] 3.203451
+#> (assumed_se35<-sqrt(5*(1.43^2)-tau^2))
+#[1] 3.183236
+
+
+
+##defining a data set in which outputs from applying our method is saved
+final<-data.frame(inconsistency= numeric(0), DIC_con = numeric(0), DIC_incon = numeric(0),
+dev_con = numeric(0), dev_incon = numeric(0),
+sd_con = numeric(0), sd_incon = numeric(0),
+d12_sum= numeric(0), d13_sum = numeric(0), d14_sum = numeric(0),d15_sum = numeric(0),
+d12_var= numeric(0), d13_var= numeric(0),  d14_var= numeric(0), d15_var= numeric(0), 
+best1_sum= numeric(0), best2_sum= numeric(0), best3_sum = numeric(0)
+, best4_sum = numeric(0), best5_sum = numeric(0))
+
+
+
+
+for (k in 1:100){
+
+DIC1<-0;DIC2<-0
+dev1<-0;dev2<-0
+sd1<-0;sd2<-0
+
+d12<-0;d13<-0;d14<-0;d15<-0
+
+sd12<-0;sd13<-0;sd14<-0;sd15<-0
+
+best1<-0;best2<-0;best3<-0;best4<-0;best5<-0
+
+
+
+for (j in 1:500){
+
+a<-rnorm(5,mean=-3.223+0.5*(k-1),sd=tau) 
+a1<-0
+
+b<-rnorm(5,mean=-1.986+0.5*(k-1),sd=tau) 
+b1<-0
+
+c<-rnorm(5,mean=-1.632+0.5*(k-1),sd=tau) 
+c1<-0
+
+
+for(i in 1:5){
+
+a1[i]<-rnorm(1,a[i],sd=assumed_se24)
+b1[i]<-rnorm(1,b[i],sd=assumed_se25)
+c1[i]<-rnorm(1,c[i],sd=assumed_se35)
+
+}
+
+
+
+##data imputation
+data24_imputed<-data.frame(study=rep(1:5,each=2),treatment=c(rep(c("2","4"),5)),
+diff=c(NA,a1[1],NA,a1[2],NA,a1[3],NA,a1[4],NA,a1[5]),
+std.err=rep(c(NA,assumed_se24),5))
+
+data25_imputed<-data.frame(study=rep(6:10,each=2),treatment=c(rep(c("2","5"),5)),
+diff=c(NA,b1[1],NA,b1[2],NA,b1[3],NA,b1[4],NA,b1[5]),
+std.err=rep(c(NA,assumed_se25),5))
+
+data35_imputed<-data.frame(study=rep(11:15,each=2),treatment=c(rep(c("3","5"),5)),
+diff=c(NA,c1[1],NA,c1[2],NA,c1[3],NA,c1[4],NA,c1[5]),
+std.err=rep(c(NA,assumed_se35),5))
+
+
+data_imputed<-rbind(data24_imputed,data25_imputed,data35_imputed)
+
+t.s<-matrix(data_imputed$treatment,ncol=2,byrow=TRUE)
+y<-matrix(data_imputed$diff,ncol=2,byrow=TRUE)
+se<-matrix(data_imputed$std.err,ncol=2,byrow=TRUE)
+na.s<-rep(2,nrow(t.s))
+ns.s<-15
+
+
+##network meta-analysis using a shared parameter consistency model
+
+inits<-function(){list(d=c(NA,0,0,0,0),sd=1)}
+
+data<-list("r","n","t","ns","na","nt","t.s","y","se","na.s","ns.s")
+vars2keep<-list("d","sd","md","best","totresdev")
+
+
+output<-bugs(
+    model.file=file.path(modelfile2),
+    data=data,
+    inits = inits,
+    parameters.to.save = vars2keep,
+    n.chains=3,
+    n.iter=40000,
+    n.burnin=10000,
+    n.thin=20,
+    debug=FALSE,
+    bugs.seed=1000,
+    DIC=TRUE
+ )
+
+
+
+##network meta-analysis using a shared parameter inconsistency model
+
+inits2<-function(){list(d=structure(.Data=c(NA,NA,NA,NA, 0,NA,NA,NA, 0,0,NA,NA, 0,0,0,NA, 0,0,0,0),.Dim=c(4,5)),sd=1)}
+vars2keep2<-list("d","sd","totresdev")
+
+output2<-bugs(
+    model.file=file.path(modelfile3),
+    data=data,
+    inits = inits2,
+    parameters.to.save = vars2keep2,
+    n.chains=3,
+    n.iter=40000,
+    n.burnin=10000,
+    n.thin=20,
+    debug=FALSE,
+    bugs.seed=1000,
+    DIC=TRUE
+ )
+
+##abtraction of DIC and residual deviance from result of each model
+output$DIC->DIC1[j]
+output2$DIC->DIC2[j]
+
+output$mean$totresdev->dev1[j]
+output2$mean$totresdev->dev2[j]
+
+##abstraction of results from a consistency model
+output$mean$sd->sd1[j]
+output2$mean$sd->sd2[j]
+
+
+output$mean$md[1,1]->d12[j]
+output$mean$md[1,2]->d13[j]
+output$mean$md[1,3]->d14[j]
+output$mean$md[1,4]->d15[j]
+
+output$sd$md[1,1]->sd12[j]
+output$sd$md[1,2]->sd13[j]
+output$sd$md[1,3]->sd14[j]
+output$sd$md[1,4]->sd15[j]
+
+
+output$mean$best[1]->best1[j]
+output$mean$best[2]->best2[j]
+output$mean$best[3]->best3[j]
+output$mean$best[4]->best4[j]
+output$mean$best[5]->best5[j]
+
+}
+
+
+##combining the results from the 500 complete networks by Rubin's rule
+final[k,1]<-0.5*(k-1)
+final[k,2]<-mean(DIC1)
+final[k,3]<-mean(DIC2)
+
+final[k,4]<-mean(dev1)
+final[k,5]<-mean(dev2)
+
+final[k,6]<-mean(sd1)
+final[k,7]<-mean(sd2)
+
+
+final[k,8]<-mean(d12)
+final[k,9]<-mean(d13)
+final[k,10]<-mean(d14)
+final[k,11]<-mean(d15)
+
+
+
+final[k,12]<-mean(sd12^2)+var(d12)*(1+1/500)
+final[k,13]<-mean(sd13^2)+var(d13)*(1+1/500)
+final[k,14]<-mean(sd14^2)+var(d14)*(1+1/500)
+final[k,15]<-mean(sd14^2)+var(d15)*(1+1/500)
+
+
+final[k,16]<-mean(best1)
+final[k,17]<-mean(best2)
+final[k,18]<-mean(best3)
+final[k,19]<-mean(best4)
+final[k,20]<-mean(best5)
+
+
+if(mean(dev1)>mean(dev2)) break
+}
+
+
+final
+
+
+

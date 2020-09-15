@@ -1,0 +1,285 @@
+#R code : smoking cessation data set
+library(R2WinBUGS)
+
+# Calling WinBUGS code for consistency model and inconsistency model: 
+# Adapt the WinBUGS code published in the supplement of:
+#Dias S, Welton NJ, Sutton AJ, Caldwell DM, Lu G, Ades A. 
+#NICE DSU Technical Support Document 4: 
+#Inconsistency in networks of evidence based on randomised controlled trials. NICE Decision Support Unit. 2011.
+
+modelfile<-"model_consistency.txt" 
+modelfile2<-"model_inconsistency.txt" 
+
+smoking_cessation<-read.csv("smoking_cessation.csv",header=t) #loading the smoking cessation data set 
+##no intervention: treatment=1
+##self-help: treatment=2
+##individual counseling: treatment=3
+##group counseling: treatment=4
+
+smoking_cessation 
+#> smoking_cessation 
+#   study treatment        diff   std.err
+#1      1         1          NA        NA
+#2      1         2 -0.01596494 0.1699150
+#3      2         1          NA        NA
+#4      2         2  0.39350454 0.3265754
+#5      3         1          NA        NA
+#6      3         2  0.70294158 0.4413217
+#7      4         1          NA        NA
+#8      4         3  2.20228929 0.1430439
+#9      5         1          NA        NA
+#10     5         3  0.87035364 0.7910933
+#11     6         1          NA        NA
+#12     6         3  0.41564852 0.1557329
+#13     7         1          NA        NA
+#14     7         3  2.77968375 1.4698402
+#15     8         1          NA        NA
+#16     8         3  2.70539327 0.6251608
+#17     9         1          NA        NA
+#18     9         3  2.42518742 1.0422512
+#19    10         1          NA        NA
+#20    10         3  0.44361687 0.5219769
+#21    11         1          NA        NA
+#22    11         3  0.46459090 0.1417462
+#23    12         1          NA        NA
+#24    12         3 -0.15581043 0.3212230
+#25    13         1          NA        NA
+#26    13         3 -0.23997016 0.1736564
+#27    14         1          NA        NA
+#28    14         3  0.03895601 0.1873842
+#29    15         1          NA        NA
+#30    15         3  0.39041227 0.1680177
+#31    16         1          NA        NA
+#32    16         3  0.10633565 0.5955997
+#33    17         1          NA        NA
+#34    17         3  0.58339829 0.2983467
+#35    18         1          NA        NA
+#36    18         4  3.52251683 1.4969970
+#37    19         2          NA        NA
+#38    19         3 -0.15168459 0.4289753
+#39    20         2          NA        NA
+#40    20         4  1.04348631 0.4489795
+#41    21         3          NA        NA
+#42    21         4  0.68072466 0.4092394
+#43    22         3          NA        NA
+#44    22         4 -0.40546511 0.7139060
+
+
+## network meta-analysis using the smoking cessation data set
+t<-matrix(smoking_cessation$treatment,ncol=2,byrow=TRUE)
+y<-matrix(smoking_cessation$diff,ncol=2,byrow=TRUE)
+se<-matrix(smoking_cessation$std.err,ncol=2,byrow=TRUE)
+na<-rep(2,nrow(t))
+NS<-nrow(t)
+NT<-length(levels(as.factor(smoking_cessation$treatment)))
+
+inits<-function(){list(d=c(NA,0,0,0),tau=1)}
+
+data<-list("t","y","se","na","NS","NT")
+vars2keep<-list("d","tau","tau2","md","best")
+
+output<-bugs(model.file=file.path(modelfile), data=data, inits = inits,
+    parameters.to.save = vars2keep, n.chains=4, n.iter=25000, n.burnin=5000,
+    n.thin=1, debug=TRUE, bugs.seed=1000, DIC=TRUE)
+print(output,digits=4)
+#> print(output,digits=4)
+#Inference for Bugs model at "model_consistency.txt", fit using WinBUGS,
+# 4 chains, each with 25000 iterations (first 5000 discarded)
+# n.sims = 80000 iterations saved
+#            mean     sd    2.5%     25%     50%     75%  97.5%   Rhat n.eff
+#d[2]      0.4332 0.4166 -0.3763  0.1614  0.4277  0.6978  1.280 1.0011 17000
+#d[3]      0.7283 0.2393  0.2781  0.5693  0.7203  0.8787  1.225 1.0010 80000
+#d[4]      1.3757 0.5728  0.2691  0.9970  1.3670  1.7430  2.536 1.0010 69000
+#tau       0.7814 0.1875  0.4926  0.6481  0.7561  0.8857  1.220 1.0011 21000
+#tau2      0.6458 0.3315  0.2426  0.4200  0.5717  0.7844  1.489 1.0011 21000
+#md[1,2]   0.4332 0.4166 -0.3763  0.1614  0.4277  0.6978  1.280 1.0011 17000
+#md[1,3]   0.7283 0.2393  0.2781  0.5693  0.7203  0.8787  1.225 1.0010 80000
+#md[1,4]   1.3757 0.5728  0.2691  0.9970  1.3670  1.7430  2.536 1.0010 69000
+#md[2,3]   0.2951 0.4405 -0.5775  0.0132  0.2923  0.5767  1.171 1.0011 18000
+#md[2,4]   0.9425 0.6068 -0.2411  0.5456  0.9397  1.3340  2.155 1.0011 30000
+#md[3,4]   0.6474 0.5507 -0.4333  0.2846  0.6472  1.0030  1.741 1.0010 68000
+#best[1]   0.0000 0.0061  0.0000  0.0000  0.0000  0.0000  0.000 1.0513 80000
+#best[2]   0.0360 0.1862  0.0000  0.0000  0.0000  0.0000  1.000 1.0010 60000
+#best[3]   0.1002 0.3003  0.0000  0.0000  0.0000  0.0000  1.000 1.0010 38000
+#best[4]   0.8638 0.3430  0.0000  1.0000  1.0000  1.0000  1.000 1.0010 80000
+#deviance 21.9832 6.4900 10.9500 17.3500 21.3900 26.0300 36.230 1.0010 60000
+#
+#For each parameter, n.eff is a crude measure of effective sample size,
+#and Rhat is the potential scale reduction factor (at convergence, Rhat=1).
+#
+#DIC info (using the rule, pD = Dbar-Dhat)
+#pD = 16.9 and DIC = 38.9
+#DIC is an estimate of expected predictive error (lower deviance is better).
+
+##network meta-analysis using the derived star-shaped network for the smoking cessation data set
+
+star<-smoking_cessation[1:36,] ## creating a star-shaped network 
+
+t<-matrix(star$treatment,ncol=2,byrow=TRUE)
+y<-matrix(star$diff,ncol=2,byrow=TRUE)
+se<-matrix(star$std.err,ncol=2,byrow=TRUE)
+na<-rep(2,nrow(t))
+NS<-nrow(t)
+NT<-length(levels(as.factor(star$treatment)))
+
+inits<-function(){list(d=c(NA,0,0,0),tau=1)}
+
+data<-list("t","y","se","na","NS","NT")
+vars2keep<-list("d","tau","tau2","md","best")
+
+output<-bugs(model.file=file.path(modelfile), data=data, inits = inits,
+    parameters.to.save = vars2keep, n.chains=4, n.iter=25000, n.burnin=5000,
+    n.thin=1, debug=TRUE, bugs.seed=1000, DIC=TRUE)
+print(output,digits=2)
+#> print(output,digits=4)
+#Inference for Bugs model at "model_consistency.txt", fit using WinBUGS,
+# 4 chains, each with 25000 iterations (first 5000 discarded)
+# n.sims = 80000 iterations saved
+#            mean     sd    2.5%     25%     50%     75%  97.5%   Rhat n.eff
+#d[2]      0.3317 0.5416 -0.7416 -0.0129  0.3272  0.6732  1.414 1.0010 47000
+#d[3]      0.7213 0.2695  0.2092  0.5454  0.7122  0.8877  1.280 1.0010 72000
+#d[4]      3.5240 1.7385  0.1406  2.3540  3.5160  4.6910  6.966 1.0011 15000
+#tau       0.8499 0.2268  0.5133  0.6903  0.8148  0.9693  1.390 1.0010 80000
+#tau2      0.7737 0.4531  0.2635  0.4765  0.6639  0.9395  1.932 1.0010 80000
+#md[1,2]   0.3317 0.5416 -0.7416 -0.0129  0.3272  0.6732  1.414 1.0010 47000
+#md[1,3]   0.7213 0.2695  0.2092  0.5454  0.7122  0.8877  1.280 1.0010 72000
+#md[1,4]   3.5240 1.7385  0.1406  2.3540  3.5160  4.6910  6.966 1.0011 15000
+#md[2,3]   0.3896 0.6049 -0.8025  0.0003  0.3849  0.7711  1.605 1.0010 40000
+#md[2,4]   3.1923 1.8228 -0.3697  1.9630  3.1910  4.4173  6.781 1.0012 13000
+#md[3,4]   2.8027 1.7564 -0.6355  1.6230  2.8000  3.9830  6.269 1.0011 17000
+#best[1]   0.0000 0.0061  0.0000  0.0000  0.0000  0.0000  0.000 1.0513 80000
+#best[2]   0.0193 0.1377  0.0000  0.0000  0.0000  0.0000  0.000 1.0010 80000
+#best[3]   0.0416 0.1996  0.0000  0.0000  0.0000  0.0000  1.000 1.0010 80000
+#best[4]   0.9390 0.2392  0.0000  1.0000  1.0000  1.0000  1.000 1.0010 80000
+#deviance 15.8556 5.9804  5.9660 11.5900 15.2500 19.4500 29.200 1.0010 80000
+#
+#For each parameter, n.eff is a crude measure of effective sample size,
+#and Rhat is the potential scale reduction factor (at convergence, Rhat=1).
+#
+#DIC info (using the rule, pD = Dbar-Dhat)
+#pD = 14.8 and DIC = 30.6
+#DIC is an estimate of expected predictive error (lower deviance is better).
+
+##########################################################################################
+Application of our developed method to the data set corresponding to the created star-shaped network
+##########################################################################################
+
+##calculation of between-study and within-study variances 
+(tau<-0.8499)
+(assumed_se23<-sqrt(5*(0.6049^2)-tau^2))
+(assumed_se24<-sqrt(5*(1.8228^2)-tau^2))
+(assumed_se34<-sqrt(5*(1.7564^2)-tau^2))
+
+##defining a data set in which outputs from applying our method is saved
+final<-data.frame(inconsistency= numeric(0),dev_con = numeric(0),dev_incon = numeric(0),
+d12_sum= numeric(0),d13_sum = numeric(0),d14_sum = numeric(0), 
+d23_sum = numeric(0),d24_sum = numeric(0),d34_sum = numeric(0),
+d12_var = numeric(0),d13_var = numeric(0),d14_var = numeric(0), 
+d23_var = numeric(0),d24_var = numeric(0),d34_var = numeric(0),
+best1_sum= numeric(0),best2_sum= numeric(0),best3_sum = numeric(0), best4_sum = numeric(0))
+
+for (k in 1:100){
+dev1<-0;dev2<-0
+d12<-0;d13<-0;d14<-0;d23<-0;d24<-0;d34<-0
+sd12<-0;sd13<-0;sd14<-0;sd23<-0;sd24<-0;sd34<-0
+best1<-0;best2<-0;best3<-0;best4<-0
+
+for (j in 1:500){
+a<-rnorm(5,mean=0.3896-0.1*(k-1),sd=tau) 
+b<-rnorm(5,mean=3.192-0.1*(k-1),sd=tau) 
+c<-rnorm(5,mean=2.803-0.1*(k-1),sd=tau) 
+a1<-0; b1<-0; c1<-0
+
+for(i in 1:5){
+a1[i]<-rnorm(1,a[i],sd=assumed_se23)
+b1[i]<-rnorm(1,b[i],sd=assumed_se24)
+c1[i]<-rnorm(1,c[i],sd=assumed_se34)
+}
+
+##data imputation
+## 2vs3
+data23_imputed<-data.frame(study=rep(19:23,each=2),treatment=c(rep(c("2","3"),5)),
+diff=c(NA,a1[1],NA,a1[2],NA,a1[3],NA,a1[4],NA,a1[5]),std.err=rep(c(NA,assumed_se23),5))
+## 2vs4
+data24_imputed<-data.frame(study=rep(24:28,each=2),treatment=c(rep(c("2","4"),5)),
+diff=c(NA,b1[1],NA,b1[2],NA,b1[3],NA,b1[4],NA,b1[5]),std.err=rep(c(NA,assumed_se24),5))
+## 3vs4
+data34_imputed<-data.frame(study=rep(29:33,each=2),treatment=c(rep(c("3","4"),5)),
+diff=c(NA,c1[1],NA,c1[2],NA,c1[3],NA,c1[4],NA,c1[5]),std.err=rep(c(NA,assumed_se34),5))
+complete<-rbind(star,data23_imputed,data24_imputed,data34_imputed)
+
+##network meta-analysis using a consistency model
+t<-matrix(complete$treatment,ncol=2,byrow=TRUE)
+y<-matrix(complete$diff,ncol=2,byrow=TRUE)
+se<-matrix(complete$std.err,ncol=2,byrow=TRUE)
+na<-rep(2,nrow(t))
+NS<-nrow(t)
+NT<-length(levels(as.factor(complete$treatment)))
+inits<-function(){list(d=c(NA,0,0,0),sd=1)}
+data<-list("t","y","se","na","NS","NT")
+vars2keep<-list("d","tau","md","best")
+
+output<-bugs(model.file=file.path(modelfile),data=data,inits = inits,
+parameters.to.save = vars2keep,n.chains=3,n.iter=40000,n.burnin=10000,n.thin=20,
+debug=FALSE,bugs.seed=1000,DIC=TRUE)
+
+##network meta-analysis using an inconsistency model
+inits2<-function(){list(d=structure(.Data=c(NA,NA,NA, 0,NA,NA, 0,0,NA, 0,0,0),.Dim=c(3,4)),sd=1)}
+vars2keep2<-list("d","tau")
+
+output2<-bugs(model.file=file.path(modelfile2),data=data,inits = inits2,
+parameters.to.save = vars2keep2,n.chains=3,n.iter=40000,n.burnin=10000,n.thin=20,
+debug=FALSE,bugs.seed=1000,DIC=TRUE)
+
+##abstraction of residual deviance from each model
+output$mean$totresdev->dev1[j]
+output2$mean$totresdev->dev2[j]
+##abstraction of results from a consistency model
+output$mean$md[1,1]->d12[j]
+output$mean$md[1,2]->d13[j]
+output$mean$md[1,3]->d14[j]
+output$mean$md[2,1]->d23[j]
+output$mean$md[2,2]->d24[j]
+output$mean$md[3,1]->d34[j]
+
+output$sd$md[1,1]->sd12[j]
+output$sd$md[1,2]->sd13[j]
+output$sd$md[1,3]->sd14[j]
+output$sd$md[2,1]->sd23[j]
+output$sd$md[2,2]->sd24[j]
+output$sd$md[2,3]->sd34[j]
+
+output$mean$best[1]->best1[j]
+output$mean$best[2]->best2[j]
+output$mean$best[3]->best3[j]
+output$mean$best[4]->best4[j]
+}
+
+##combining the results from the 500 complete networks by Rubin's rule
+final[k,1]<-0.1*(k-1)
+final[k,2]<-mean(dev1)
+final[k,3]<-mean(dev2)
+
+final[k,4]<-mean(d12)
+final[k,5]<-mean(d13)
+final[k,6]<-mean(d14)
+final[k,7]<-mean(d23)
+final[k,8]<-mean(d24)
+final[k,9]<-mean(d34)
+
+final[k,10]<-mean(sd12^2)+var(d12)*(1+1/500)
+final[k,11]<-mean(sd13^2)+var(d13)*(1+1/500)
+final[k,12]<-mean(sd14^2)+var(d14)*(1+1/500)
+final[k,13]<-mean(sd23^2)+var(d23)*(1+1/500)
+final[k,14]<-mean(sd24^2)+var(d24)*(1+1/500)
+final[k,15]<-mean(sd34^2)+var(d34)*(1+1/500)
+
+final[k,16]<-mean(best1)
+final[k,17]<-mean(best2)
+final[k,18]<-mean(best3)
+final[k,19]<-mean(best4)
+if(mean(dev1)>mean(dev2)) break
+}
+
+
+final

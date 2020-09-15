@@ -1,0 +1,177 @@
+#R code : simulated data set (d) 
+library(R2WinBUGS)
+
+# Calling WinBUGS code for consistency model and inconsistency model: 
+# Adapt the WinBUGS code published in the supplement of:
+#Dias S, Welton NJ, Sutton AJ, Caldwell DM, Lu G, Ades A. 
+#NICE DSU Technical Support Document 4: 
+#Inconsistency in networks of evidence based on randomised controlled trials. NICE Decision Support Unit. 2011.
+.
+
+modelfile<-"model_consistency.txt" #calling the consistency model written in WinBUGS code
+modelfile2<-"model_inconsistency.txt" #calling the inconsistency model written in WinBUGS code 
+
+s4<-read.csv("s4.csv",header=T) #loading the simulated data set (a)
+##A: treatment=1
+##B: treatment=2
+##C: treatment=3
+
+S4
+#> s1
+#   study treatment diff std.err
+#1      1         1   NA      NA
+#2      1         2    0.5       2
+#3      2         1   NA      NA
+#4      2         2    0.5       2
+#5      3         1   NA      NA
+#6      3         2    0.5       2
+#7      4         1   NA      NA
+#8      4         2    0.5       2
+#9      5         1   NA      NA
+#10     5         2    0.5       2
+#11     1         1   NA      NA
+#12     1         3    1       2
+#13     2         1   NA      NA
+#14     2         3    1       2
+#15     3         1   NA      NA
+#16     3         3    1       2
+#17     4         1   NA      NA
+#18     4         3    1       2
+#19     5         1   NA      NA
+#20     5         3    1       2
+
+## network meta-analysis using the data set
+t<-matrix(s1$treatment,ncol=2,byrow=TRUE)
+y<-matrix(s1$diff,ncol=2,byrow=TRUE)
+se<-matrix(s1$std.err,ncol=2,byrow=TRUE)
+na<-rep(2,nrow(t))
+NS<-nrow(t)
+NT<-length(levels(as.factor(s1$treatment)))
+
+inits<-function(){list(d=c(NA,0,0),sd=1)}
+data<-list("t","y","se","na","NS","NT")
+vars2keep<-list("d","tau","sd","md","best")
+output<-bugs(model.file=file.path(modelfile), data=data, inits = inits,
+    parameters.to.save = vars2keep, n.chains=4, n.iter=25000, n.burnin=5000,
+    n.thin=1, debug=TRUE, bugs.seed=1000, DIC=TRUE)
+print(output,digits=4)
+#> print(output,digits=4)
+#Inference for Bugs model at "model_consistency.txt", fit using WinBUGS,
+# 4 chains, each with 25000 iterations (first 5000 discarded)
+# n.sims = 80000 iterations saved
+#            mean     sd    2.5%     25%     50%     75%  97.5%   Rhat n.eff
+#d[2]      0.5244 0.9856 -1.4260 -0.1282  0.5320  1.1820  2.442 1.0018  3000
+#d[3]      0.9924 0.9828 -0.8889  0.3337  0.9817  1.6360  2.969 1.0010 35000
+#tau       0.6846 0.5791  0.0262  0.2569  0.5416  0.9554  2.171 1.0026  1500
+#tau2      0.8040 1.4771  0.0007  0.0660  0.2933  0.9127  4.712 1.0026  1500
+#md[1,2]   0.5244 0.9856 -1.4260 -0.1282  0.5320  1.1820  2.442 1.0018  3000
+#md[1,3]   0.9924 0.9828 -0.8889  0.3337  0.9817  1.6360  2.969 1.0010 35000
+#md[2,3]   0.4680 1.3972 -2.2110 -0.4866  0.4476  1.4070  3.211 1.0014  6400
+#best[1]   0.0455 0.2085  0.0000  0.0000  0.0000  0.0000  1.000 1.0012 11000
+#best[2]   0.3532 0.4780  0.0000  0.0000  0.0000  1.0000  1.000 1.0027  1500
+#best[3]   0.6013 0.4896  0.0000  0.0000  1.0000  1.0000  1.000 1.0023  1900
+#deviance 35.2647 2.4392 32.4900 33.4900 34.6100 36.3800 41.640 1.0013  6700
+#
+#For each parameter, n.eff is a crude measure of effective sample size,
+#and Rhat is the potential scale reduction factor (at convergence, Rhat=1).
+#
+#DIC info (using the rule, pD = Dbar-Dhat)
+#pD = 3.0 and DIC = 38.3
+#DIC is an estimate of expected predictive error (lower deviance is better).
+##########################################################################################
+Applying our developed method to the simulated data set 
+##########################################################################################
+
+##calculate between-study and within-study variances
+(tau<-0.6846)
+(assumed_se<-sqrt(5*(1.397^2)-tau^2))
+
+##defin a data set in which outputs from applying our method is saved
+final<-data.frame(inconsistency= numeric(0), dev_con = numeric(0), dev_incon = numeric(0),
+d12_sum= numeric(0), d13_sum = numeric(0), d23_sum = numeric(0),
+d12_var= numeric(0), d13_var = numeric(0), d23_var = numeric(0),
+best1_sum= numeric(0), best2_sum= numeric(0), best3_sum = numeric(0))
+
+for (k in 1:100){
+
+dev1<-0;dev2<-0
+d12<-0;d13<-0;d23<-0
+sd12<-0;sd13<-0;sd23<-0
+best1<-0;best2<-0;best3<-0
+
+for (j in 1:500){
+a<-rnorm(5,mean=0.5-0.2*(k-1),sd=tau) 
+a1<-0
+for(i in 1:5){
+a1[i]<-rnorm(1,a[i],sd=assumed_se)
+}
+
+##data imputation
+
+##2vs3
+data23_imputed<-data.frame(study=rep(12:16,each=2),treatment=c(rep(c("2","3"),5)),
+diff=c(NA,a1[1],NA,a1[2],NA,a1[3],NA,a1[4],NA,a1[5]),
+std.err=rep(c(NA,assumed_se),5))
+complete<-rbind(s1,data23_imputed)
+
+##network meta-analysis using a consistency model
+t<-matrix(complete$treatment,ncol=2,byrow=TRUE)
+y<-matrix(complete$diff,ncol=2,byrow=TRUE)
+se<-matrix(complete$std.err,ncol=2,byrow=TRUE)
+na<-rep(2,nrow(t))
+NS<-nrow(t)
+NT<-length(levels(as.factor(complete$treatment)))
+
+inits<-function(){list(d=c(NA,0,0),sd=1)}
+data<-list("t","y","se","na","NS","NT")
+vars2keep<-list("d","tau","md","best")
+
+output<-bugs(model.file=file.path(modelfile),data=data,inits = inits,
+parameters.to.save = vars2keep,n.chains=3,n.iter=40000,n.burnin=10000,n.thin=20,
+debug=FALSE,bugs.seed=1000,DIC=TRUE)
+
+##network meta-analysis using an inconsistency model
+inits2<-function(){list(d=structure(.Data=c(NA,NA,0,NA,0,0),.Dim=c(2,3)),sd=1)}
+vars2keep2<-list("d","tau")
+output2<-bugs(model.file=file.path(modelfile2),data=data,inits = inits2,
+parameters.to.save = vars2keep2,n.chains=3,n.iter=40000,n.burnin=10000,n.thin=20,
+debug=FALSE,bugs.seed=1000,DIC=TRUE)
+
+##abstraction of residual deviance from result of each model
+output$mean$totresdev->dev1[j]
+output2$mean$totresdev->dev2[j]
+
+##abstraction of results from a consistency model
+output$mean$md[1,1]->d12[j]
+output$mean$md[1,2]->d13[j]
+output$mean$md[2,1]->d23[j]
+
+output$sd$md[1,1]->sd12[j]
+output$sd$md[1,2]->sd13[j]
+output$sd$md[2,1]->sd23[j]
+
+output$mean$best[1]->best1[j]
+output$mean$best[2]->best2[j]
+output$mean$best[3]->best3[j]
+}
+
+##combining the results from the 500 complete networks by Rubin's rule
+final[k,1]<-0.2*(k-1)
+final[k,2]<-mean(dev1)
+final[k,3]<-mean(dev2)
+
+final[k,4]<-mean(d12)
+final[k,5]<-mean(d13)
+final[k,6]<-mean(d14)
+
+final[k,7]<-mean(sd12^2)+var(d12)*(1+1/500)
+final[k,8]<-mean(sd13^2)+var(d13)*(1+1/500)
+final[k,9]<-mean(sd14^2)+var(d14)*(1+1/500)
+
+final[k,10]<-mean(best1)
+final[k,11]<-mean(best2)
+final[k,12]<-mean(best3)
+
+if(mean(dev1)>mean(dev2)) break
+}
+
