@@ -1,4 +1,4 @@
-# **R-codes_sensitivity-analysis-method-through-imputation**
+# **Assessing robustness of conclusion from a star-shaped network meta-analysis through imputation**
 
 The repository contains material to reproduce results of the manuscript "A method for assessing robustness of the results of a star-shaped network meta-analysis under the unidentifiable consistency assumption" that is in progress.
 
