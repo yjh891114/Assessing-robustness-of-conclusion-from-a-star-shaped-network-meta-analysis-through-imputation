@@ -2,13 +2,12 @@
 library(R2WinBUGS)
 
 
-
-# Calling WinBUGS code for shared parameter model: 
+# Calling WinBUGS code for consistency model and inconsistency model: 
 # Adapt the WinBUGS code published in the supplement of:
 #Dias S, Welton NJ, Sutton AJ, Caldwell DM, Lu G, Ades A. 
 #NICE DSU Technical Support Document 4: Inconsistency in networks of evidence based on randomised controlled trials. NICE Decision Support Unit. 2011.
 
-# Calling WinBUGS code for consistency model and inconsistency model: 
+# Calling WinBUGS code for shared parameter model: 
 # Adapt the WinBUGS code published in the supplement of:
 #Dias S, Welton NJ, Sutton AJ, Ades A: NICE DSU technical support document 2: a generalised linear modelling framework for pairwise and network meta-analysis of randomised controlled trials. NICE Decision Support Unit, 2011.
 
