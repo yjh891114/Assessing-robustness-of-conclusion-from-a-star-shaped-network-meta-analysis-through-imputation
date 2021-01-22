@@ -4,6 +4,8 @@ The repository contains materials to reproduce results of the manuscript "A meth
 
 This repository contains:
 
+* consistency_model.txt, a WinBUGS code for consistency model.
+* inconsistency_model.txt, a WinBUGS code for inconsistency model.
 * smoking_cessation.csv, a dataset of the smoking cessation example.
 * smoking_cessation.txt, an R script to reproduce the smoking cessation example.
 * simulated_dataset.txt, an R script to reproduce the exercise of the simulated dataset (d).
