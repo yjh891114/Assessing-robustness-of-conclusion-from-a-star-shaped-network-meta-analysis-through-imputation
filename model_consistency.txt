@@ -47,8 +47,8 @@ for(i in 1:NS) {
 
 
       for (k in 1:NT) {
-          rk[k] <- NT+1-rank(d[],k) # assumes events are ¡°good¡±
-          #rk[k] <- rank(d[],k) # assumes events are ¡°bad¡±
+          rk[k] <- NT+1-rank(d[],k) # assumes events are Â¡Â°goodÂ¡Â±
+          #rk[k] <- rank(d[],k) # assumes events are Â¡Â°badÂ¡Â±
           best[k] <- equals(rk[k],1) #calculate probability that treat k is best
           }
 
