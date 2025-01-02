@@ -1,6 +1,6 @@
 # **Assessing robustness of conclusion from a star-shaped network meta-analysis through imputation**
 
-The repository contains materials to reproduce results of the manuscript "A method for assessing robustness of the results of a star-shaped network meta-analysis under the unidentifiable consistency assumption" that is in progress.
+The repository contains materials to reproduce results of the published manuscript "A method for assessing robustness of the results of a star-shaped network meta-analysis under the unidentifiable consistency assumption".
 
 This repository contains:
 
